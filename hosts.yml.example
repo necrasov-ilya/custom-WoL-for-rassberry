@@ -1,0 +1,28 @@
+# Example hosts configuration for Telegram WoL bot
+# Copy to hosts.yml and edit values
+
+hosts:
+  - name: pc1
+    mac: "AA:BB:CC:DD:EE:01"
+    broadcast_ip: "192.168.1.255"  # optional; default 255.255.255.255
+    os: windows
+    shutdown:
+      method: ssh
+      ssh:
+        host: "192.168.1.101"
+        user: "Administrator"
+        port: 22
+        key_path: "<SSH_KEY_PATH>"
+        command: "shutdown /s /t 0"
+  - name: pc2
+    mac: "AA:BB:CC:DD:EE:02"
+    broadcast_ip: "192.168.1.255"
+    os: linux
+    shutdown:
+      method: ssh
+      ssh:
+        host: "192.168.1.102"
+        user: "pi"
+        port: 22
+        key_path: "<SSH_KEY_PATH>"
+        command: "sudo poweroff"

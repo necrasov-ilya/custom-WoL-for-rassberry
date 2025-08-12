@@ -1,0 +1,23 @@
+[Unit]
+Description=Telegram Wake-on-LAN Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=%h/wolbot
+EnvironmentFile=%h/wolbot/.env
+ExecStart=/usr/bin/env bash -lc 'source %h/wolbot/venv/bin/activate; python -m src.bot'
+Restart=on-failure
+RestartSec=5
+
+# Hardening
+ProtectSystem=full
+ProtectHome=true
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
