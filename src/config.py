@@ -102,21 +102,24 @@ def load_settings(env_path: Optional[Path] = None, hosts_path: Optional[Path] = 
             if os_name not in {"windows", "linux"}:
                 raise ConfigError(f"Unsupported OS for host {name}: {os_name}")
 
+            # SSH fields are optional for WoL-only mode
             sd = item.get("shutdown", {})
             if str(sd.get("method", "ssh")) != "ssh":
                 raise ConfigError(f"Only ssh shutdown supported for host {name}")
             ssd = sd.get("ssh", {})
+            
+            # Create dummy SSH config if not provided (for WoL-only mode)
             ssh = SSHConfig(
-                host=str(ssd["host"]).strip(),
-                user=str(ssd["user"]).strip(),
+                host=str(ssd.get("host", "localhost")).strip(),
+                user=str(ssd.get("user", "user")).strip(),
                 port=int(ssd.get("port", 22)),
-                key_path=str(ssd["key_path"]).strip(),
+                key_path=str(ssd.get("key_path", "/dev/null")).strip(),
                 command=str(ssd.get("command", "sudo poweroff")).strip(),
             )
             shutdown = ShutdownConfig(method="ssh", ssh=ssh)
             hosts.append(Host(name=name, mac=mac, broadcast_ip=broadcast_ip, os=os_name, shutdown=shutdown))
-        except KeyError as e:
-            raise ConfigError(f"Missing required host field: {e}") from e
+        except (KeyError, ValueError) as e:
+            raise ConfigError(f"Invalid host configuration for {name}: {e}") from e
 
     return Settings(
         tg_token=tg_token,
