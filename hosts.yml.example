@@ -5,7 +5,11 @@
 hosts:
   - name: pc1
     mac: "AA:BB:CC:DD:EE:01"
-    broadcast_ip: "192.168.0.255"
+    broadcast_ip: "192.168.1.255"
+    ip: "192.168.1.10"        # Optional, used for ping status
+    anydesk_id: "123 456 789" # Optional Anydesk ID for reminders
   - name: pc2
     mac: "AA:BB:CC:DD:EE:02"
-    broadcast_ip: "192.168.0.255"
+    broadcast_ip: "192.168.1.255"
+    ip: "192.168.1.11"
+    anydesk_id: "987 654 321"

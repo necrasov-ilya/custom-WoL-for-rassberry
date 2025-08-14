@@ -6,14 +6,21 @@ Production-ready Telegram bot to Wake-on-LAN and shutdown your PCs from a Raspbe
 
 Set MODE=wol in your .env for Wake-on-LAN only (no SSH required). Set MODE=ssh for advanced SSH features (future).
 
-## Features
-- Wake PCs via WoL magic packet.
-- (Optional future) Shutdown via SSH command.
-- Inline buttons per host: Wake, Status, plus Refresh/Cancel.
-- Access restricted to allowed Telegram user IDs.
-- Logging to ./wolbot.log by default (can change via LOG_FILE)
+# Telegram WoL Bot
 
-## Repository tree
+Чистый бот для Wake-on-LAN. Никакого SSH, только отправка WoL пакетов, статус по ping, уведомления и удобное меню.
+
+## Возможности
+- Включение ПК через WoL (magic packet).
+- Проверка статуса (ping, если указан ip).
+- Автоуведомление через 30 сек после запуска WoL — включился ли ПК.
+- Почасовые напоминания о том что ПК включён (опция).
+- Показ AnyDesk ID (если указан в hosts.yml).
+- Рандомные «факты» в ответах для развлечения.
+- Доступ только для указанных Telegram ID.
+- Локальный лог ./wolbot.log
+
+## Запуск
 
 ```
 LICENSE
@@ -21,21 +28,19 @@ README.md
 .env.example
 hosts.yml.example
 requirements.txt
-telegram-wol.service
+main.py
 src/
   __init__.py
-  bot.py
-  wol_only.py
   config.py
-  ssh_exec.py
   wol.py
-  ssh_setup_win/
-    README.md
+tests/
+  test_config.py
+  test_wol.py
 ```
 
 ## Configuration
 
-1) Copy `.env.example` to `.env` and set values:
+1) Скопируйте `.env.example` в `.env` и задайте значения:
 
 ```
 TG_TOKEN=<TG_TOKEN>
@@ -44,7 +49,12 @@ LOG_FILE=./wolbot.log
 MODE=wol
 ```
 
-2) Copy `hosts.yml.example` to `hosts.yml` and edit. For WoL-only mode, only name, mac, and broadcast_ip are required:
+2) Скопируйте `hosts.yml.example` в `hosts.yml` и заполните. Поля:
+  - name — имя хоста (уникально)
+  - mac — MAC адрес (формат AA:BB:CC:DD:EE:FF)
+  - broadcast_ip — широковещательный адрес сети
+  - ip — (опц.) для ping статуса
+  - anydesk_id — (опц.) покажем в статусе и уведомлениях
 
 ```
 hosts:
@@ -56,44 +66,44 @@ hosts:
     broadcast_ip: "192.168.1.255"
 ```
 
-## Setup and Run (WoL-only mode)
+## Запуск
 
 ```
 python -m venv .venv
 .venv/bin/pip install -U pip
 .venv/bin/pip install -r requirements.txt
-python -m src.wol_only
+python -m main
 ```
 
-## Usage
+## Использование
 
-- Start a chat with your bot and send `/start`.
-- Use inline buttons to pick a host then Wake/Status.
-- Commands:
-  - `/wake <host>`
-  - `/status <host>`
+1. В Telegram: отправьте /start.
+2. Выберите компьютер.
+3. Выберите действие: Включить, Статус, Вкл/Выкл уведомления, Назад.
+4. После «Включить» через 30 сек придёт автоответ о включении.
 
-## Security
+## Безопасность
 
-- Only chat IDs in `ALLOWED_IDS` can use the bot (comma-separated list supported).
-- No SSH or shutdown commands in WoL-only mode.
-- Logging to ./wolbot.log by default; also logs to console.
+- Только чат ID из ALLOWED_IDS (список через запятую).
+- Никакого удалённого выполнения команд.
+- Логи: ./wolbot.log
 
-## hosts.yml for WoL-only mode
-
-- Only fields name, mac, broadcast_ip are used. Example:
+## Пример hosts.yml
 
 ```
 hosts:
   - name: pc1
     mac: "AA:BB:CC:DD:EE:01"
     broadcast_ip: "192.168.1.255"
+    ip: "192.168.1.10"
+    anydesk_id: "123 456 789"
+  - name: pc2
+    mac: "AA:BB:CC:DD:EE:02"
+    broadcast_ip: "192.168.1.255"
+    ip: "192.168.1.11"
+    anydesk_id: "987 654 321"
 ```
 
-## SSH mode (future)
-
-- For advanced SSH features, set MODE=ssh and see src/ssh_setup_win/ for future setup scripts.
-
-## License
+## Лицензия
 
 MIT

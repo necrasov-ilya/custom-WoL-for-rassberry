@@ -10,27 +10,12 @@ from dotenv import load_dotenv
 
 
 @dataclass(frozen=True)
-class SSHConfig:
-    host: str
-    user: str
-    port: int
-    key_path: str
-    command: str
-
-
-@dataclass(frozen=True)
-class ShutdownConfig:
-    method: str  # only 'ssh' supported
-    ssh: SSHConfig
-
-
-@dataclass(frozen=True)
 class Host:
     name: str
     mac: str
     broadcast_ip: str
-    os: str  # 'windows' | 'linux'
-    shutdown: ShutdownConfig
+    ip: Optional[str] = None  # For status ping
+    anydesk_id: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -98,28 +83,11 @@ def load_settings(env_path: Optional[Path] = None, hosts_path: Optional[Path] = 
             name = str(item["name"]).strip()
             mac = _validate_mac(str(item["mac"]).strip())
             broadcast_ip = str(item.get("broadcast_ip", "255.255.255.255")).strip()
-            os_name = str(item.get("os", "linux")).strip().lower()
-            if os_name not in {"windows", "linux"}:
-                raise ConfigError(f"Unsupported OS for host {name}: {os_name}")
-
-            # SSH fields are optional for WoL-only mode
-            sd = item.get("shutdown", {})
-            if str(sd.get("method", "ssh")) != "ssh":
-                raise ConfigError(f"Only ssh shutdown supported for host {name}")
-            ssd = sd.get("ssh", {})
-            
-            # Create dummy SSH config if not provided (for WoL-only mode)
-            ssh = SSHConfig(
-                host=str(ssd.get("host", "localhost")).strip(),
-                user=str(ssd.get("user", "user")).strip(),
-                port=int(ssd.get("port", 22)),
-                key_path=str(ssd.get("key_path", "/dev/null")).strip(),
-                command=str(ssd.get("command", "sudo poweroff")).strip(),
-            )
-            shutdown = ShutdownConfig(method="ssh", ssh=ssh)
-            hosts.append(Host(name=name, mac=mac, broadcast_ip=broadcast_ip, os=os_name, shutdown=shutdown))
+            ip = item.get("ip")
+            anydesk_id = item.get("anydesk_id")
+            hosts.append(Host(name=name, mac=mac, broadcast_ip=broadcast_ip, ip=ip, anydesk_id=anydesk_id))
         except (KeyError, ValueError) as e:
-            raise ConfigError(f"Invalid host configuration for {name}: {e}") from e
+            raise ConfigError(f"Invalid host configuration entry: {e}") from e
 
     return Settings(
         tg_token=tg_token,

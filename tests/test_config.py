@@ -19,17 +19,8 @@ def test_load_settings_basic(tmp_path: Path, monkeypatch):
                         "name": "pc1",
                         "mac": "aa:bb:cc:dd:ee:ff",
                         "broadcast_ip": "255.255.255.255",
-                        "os": "linux",
-                        "shutdown": {
-                            "method": "ssh",
-                            "ssh": {
-                                "host": "1.2.3.4",
-                                "user": "pi",
-                                "port": 22,
-                                "key_path": "/home/pi/.ssh/id_rsa",
-                                "command": "sudo poweroff",
-                            },
-                        },
+                        "ip": "192.168.1.10",
+                        "anydesk_id": "123 456 789",
                     }
                 ]
             }
@@ -52,11 +43,7 @@ def test_invalid_mac(tmp_path: Path):
         yaml.safe_dump(
             {
                 "hosts": [
-                    {
-                        "name": "pc1",
-                        "mac": "invalid-mac",
-                        "shutdown": {"method": "ssh", "ssh": {"host": "1", "user": "u", "key_path": "k"}},
-                    }
+                    {"name": "pc1", "mac": "invalid-mac"}
                 ]
             }
         ),
