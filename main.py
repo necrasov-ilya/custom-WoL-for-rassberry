@@ -3,6 +3,7 @@ from __future__ import annotations
 Run: python -m main  (or python main.py)
 """
 import asyncio
+import platform
 import logging
 import logging.handlers
 import random
@@ -30,6 +31,9 @@ FACTS = [
     "Факт: Если не работает — проверь кабель.",
     "Вы знали? Этот бот любит ваши пакеты (WoL пакеты).",
     "Факт: Иногда компьютер выключен. Именно поэтому вы его не видите в сети.",
+    "Макс - это крыса, никогда не доверяйте ему!",
+    "Факт: Если вы не можете найти свой компьютер, возможно, он просто спит."
+    "За баги отвечает... разбери пай, я не виноват"
 ]
 
 def setup_logging(log_file: Path) -> None:
@@ -78,15 +82,33 @@ def host_menu_keyboard(host: Host, notifications: bool) -> InlineKeyboardMarkup:
         [InlineKeyboardButton("Назад", callback_data="back")],
     ])
 
-async def ping_host(ip: Optional[str]) -> bool:
+async def ping_host(ip: Optional[str]) -> Optional[bool]:
+    """Ping host.
+
+    Returns:
+      True  -> reachable
+      False -> unreachable
+      None  -> IP not provided (status unknown)
+    """
     if not ip:
-        return False
-    cmd = ["ping", "-c", "1", "-W", "1", ip]
+        return None
+    system = platform.system().lower()
+    # Windows uses -n <count> and -w <timeout_ms>
+    if system == "windows":
+        cmd = ["ping", "-n", "1", "-w", "1000", ip]
+    else:  # Linux / macOS
+        # -c count, -W timeout (Linux). On macOS use -W (in ms) but tolerate.
+        cmd = ["ping", "-c", "1", "-W", "1", ip]
     try:
-        proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL)
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
         await asyncio.wait_for(proc.communicate(), timeout=3)
         return proc.returncode == 0
-    except Exception:
+    except Exception as e:
+        logger.debug("Ping failed for %s: %s", ip, e)
         return False
 
 def random_fact() -> str:
@@ -102,8 +124,11 @@ async def wake_host(host: Host) -> str:
         return f"❌ Не удалось отправить пакет {host.name}: {e}" + random_fact()
 
 async def status_text(host: Host) -> str:
-    online = await ping_host(host.ip)
-    base = f"Статус {host.name}: {'🟢 ВКЛ' if online else '🔴 ВЫКЛ'}"
+    status = await ping_host(host.ip)
+    if status is None:
+        base = f"Статус {host.name}: ⚪ НЕИЗВЕСТНО (IP не указан в hosts.yml)"
+    else:
+        base = f"Статус {host.name}: {'🟢 ВКЛ' if status else '🔴 ВЫКЛ'}"
     if host.anydesk_id:
         base += f"\nAnydesk: {host.anydesk_id}"
     return base + random_fact()
@@ -164,10 +189,13 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def schedule_one_time_status(query, host: Host, context: ContextTypes.DEFAULT_TYPE):
     await asyncio.sleep(30)
     online = await ping_host(host.ip)
-    text = (
-        f"{host.name}: 🟢 УСПЕШНО ВКЛЮЧЕН — можете подключаться через Anydesk {host.anydesk_id}" if (online and host.anydesk_id) else
-        f"{host.name}: 🟢 УСПЕШНО ВКЛЮЧЕН" if online else f"{host.name}: 🔴 Не удалось подтвердить включение"
-    ) + random_fact()
+    if online is None:
+        text = f"{host.name}: ⚪ Не могу подтвердить — IP не указан" + random_fact()
+    else:
+        text = (
+            f"{host.name}: 🟢 УСПЕШНО ВКЛЮЧЕН — можете подключаться через Anydesk {host.anydesk_id}" if (online and host.anydesk_id) else
+            f"{host.name}: 🟢 УСПЕШНО ВКЛЮЧЕН" if online else f"{host.name}: 🔴 Не удалось подтвердить включение"
+        ) + random_fact()
     try:
         await query.message.reply_text(text)
     except Exception:
@@ -191,7 +219,9 @@ async def periodic_status_loop(context: ContextTypes.DEFAULT_TYPE, host_name: st
         if not notifications.get(host_name, False):
             break
         online = await ping_host(host.ip)
-        if online:
+        if online is None:
+            text = f"Напоминание: для компьютера {host.name} не задан IP — статус недоступен." + random_fact()
+        elif online:
             text = (
                 f"Просто напоминаю, компьютер {host.name} включён — можете подключаться через Anydesk"
                 + (f" {host.anydesk_id}" if host.anydesk_id else "")

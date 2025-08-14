@@ -2,13 +2,9 @@
 
 Production-ready Telegram bot to Wake-on-LAN and shutdown your PCs from a Raspberry Pi 3B (Raspberry Pi OS Lite 64-bit). Portable: runs from the repo folder without creating external directories.
 
-## Modes
+## Описание
 
-Set MODE=wol in your .env for Wake-on-LAN only (no SSH required). Set MODE=ssh for advanced SSH features (future).
-
-# Telegram WoL Bot
-
-Чистый бот для Wake-on-LAN. Никакого SSH, только отправка WoL пакетов, статус по ping, уведомления и удобное меню.
+Чистый бот для Wake-on-LAN. Никакого SSH, только отправка WoL пакетов, статус по ping (если указан IP), уведомления и удобное меню.
 
 ## Возможности
 - Включение ПК через WoL (magic packet).
@@ -46,14 +42,13 @@ tests/
 TG_TOKEN=<TG_TOKEN>
 ALLOWED_IDS=<ALLOWED_IDS>  # e.g. 12345,67890
 LOG_FILE=./wolbot.log
-MODE=wol
 ```
 
 2) Скопируйте `hosts.yml.example` в `hosts.yml` и заполните. Поля:
   - name — имя хоста (уникально)
   - mac — MAC адрес (формат AA:BB:CC:DD:EE:FF)
   - broadcast_ip — широковещательный адрес сети
-  - ip — (опц.) для ping статуса
+  - ip — (опц., но рекоменд.) для ping статуса (если не указать — бот покажет статус «НЕИЗВЕСТНО»)
   - anydesk_id — (опц.) покажем в статусе и уведомлениях
 
 ```
@@ -61,9 +56,11 @@ hosts:
   - name: pc1
     mac: "AA:BB:CC:DD:EE:01"
     broadcast_ip: "192.168.1.255"
+    ip: "192.168.1.10"  # чтобы работал статус
   - name: pc2
     mac: "AA:BB:CC:DD:EE:02"
     broadcast_ip: "192.168.1.255"
+    ip: "192.168.1.11"
 ```
 
 ## Запуск
